@@ -643,7 +643,53 @@ HR as (select c.id,
 from STG_ALUMNI.UCINN_ASCENDV2__CONTACT_NAME__C c 
 inner join stg_alumni.contact on stg_alumni.contact.id = c.ucinn_ascendv2__contact__c
 where c.ucinn_ascendv2__type__c = 'Honor Roll Name'
-and  c.ucinn_ascendv2__Data_Source__c like '%Annual Giving%')
+and  c.ucinn_ascendv2__Data_Source__c like '%Annual Giving%'),
+
+event as (select
+a.NU_DONOR_ID__C  ,
+a.CONFERENCE360__ATTENDEE_FULL_NAME__C  ,
+a.CONFERENCE360__EVENT_NAME__C  ,
+a.CONFERENCE360__EVENT_START_DATE__C  ,
+a.conference360__attendance_status__c ,
+a.conference360__event_organizer_name__c,
+a.conference360__registration_status__c,
+a.conference360__event_id__c,
+case when a.CONFERENCE360__EVENT_NAME__C like '%KSM%'
+or a.CONFERENCE360__EVENT_NAME__C like '%Kellogg%'
+or a.conference360__event_organizer_name__c like '%Kellogg%'
+then 'Y' end as KSM_Event
+from stg_alumni.conference360__attendee__c a
+where a.NU_DONOR_ID__C  is not null
+and a.CONFERENCE360__EVENT_NAME__C is not null),
+
+--- Events Listagg - If needed in the future
+
+levent as (
+select event.NU_DONOR_ID__C,
+Listagg (event.CONFERENCE360__EVENT_NAME__C, ';  ') Within Group (Order By event.CONFERENCE360__EVENT_START_DATE__C) As event_name,
+Listagg (event.CONFERENCE360__EVENT_START_DATE__C, ';  ') Within Group (Order By event.CONFERENCE360__EVENT_START_DATE__C) As event_start_date,
+Listagg (event.conference360__attendance_status__c, ';  ') Within Group (Order By event.CONFERENCE360__EVENT_START_DATE__C) As event_attendance_status,
+Listagg (event.conference360__event_organizer_name__c, ';  ') Within Group (Order By event.CONFERENCE360__EVENT_START_DATE__C) As event_organizer_name,
+Listagg (event.conference360__registration_status__c, ';  ') Within Group (Order By event.CONFERENCE360__EVENT_START_DATE__C) As event_registration_status
+from event
+group by event.NU_DONOR_ID__C
+),
+
+--- event 
+
+reunion_event as (
+select
+e.donor_id,
+event.conference360__event_id__c as event_id,
+event.CONFERENCE360__EVENT_NAME__C  as event_name ,
+event.CONFERENCE360__EVENT_START_DATE__C as event_date ,
+event.conference360__attendance_status__c as attendance_status,
+event.conference360__event_organizer_name__c as organizer_name,
+event.conference360__registration_status__c as registraton_status,
+event.KSM_Event
+from event
+inner join e on event.NU_DONOR_ID__C = e.donor_id
+where event.CONFERENCE360__EVENT_NAME__C like '%KSM 2026 Reunion Weekend%')
       
  
 select distinct e.household_id,
@@ -659,6 +705,7 @@ select distinct e.household_id,
      e.first_name,
      e.last_name,
      e.institutional_suffix,
+     case when  reunion_event.donor_id is not null then reunion_event.registraton_status end as Registered_2026_Reunion,
      --- case when MIM.id_number is not null then 'MiM' end as MiM_IND, 
      FR.reunion_year_concat,
      KSM_Degrees.first_ksm_year,
@@ -843,7 +890,7 @@ select distinct e.household_id,
      HR.ucinn_ascendv2__last_name__c as Honor_Roll_Last_Name,
      HR.ucinn_ascendv2__type__c as Honor_Roll_Type,
      HR.ucinn_ascendv2__constructed_name_formula__c as Honor_Roll_Name_Formula,
-     HR.ucinn_ascendv2__Data_Source__c as Honor_Roll_Data_Source     
+     HR.ucinn_ascendv2__Data_Source__c as Honor_Roll_Data_Source
 from e 
 left join KSM_Degrees on KSM_Degrees.donor_id = e.donor_id
 --- Reunion eligible
@@ -912,3 +959,5 @@ left join f on f.CONSTITUENT_DONOR_ID = e.donor_id
 left join sp on sp.spouse_donor_id = e.spouse_donor_id
 --- Honor Roll 
 left join HR on HR.donor_id = e.donor_id
+--- Reunion Event 
+left join reunion_event on reunion_event.donor_id = e.donor_id
