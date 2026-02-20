@@ -689,7 +689,19 @@ event.conference360__registration_status__c as registraton_status,
 event.KSM_Event
 from event
 inner join e on event.NU_DONOR_ID__C = e.donor_id
-where event.CONFERENCE360__EVENT_NAME__C like '%KSM 2026 Reunion Weekend%')
+where event.CONFERENCE360__EVENT_NAME__C like '%KSM 2026 Reunion Weekend%'),
+
+--- anonymous donor
+
+anon as (Select household_id
+, household_primary_donor_id
+, s.household_primary_full_name
+, 'Y' As has_anon_giving_ksm
+, s.ngc_lifetime_full_rec
+, s.ngc_lifetime_nonanon_full_rec
+From mv_ksm_giving_summary s
+Where ngc_lifetime_full_rec <> ngc_lifetime_nonanon_full_rec
+Order By ngc_lifetime_full_rec Desc)
       
  
 select distinct e.household_id,
@@ -767,6 +779,10 @@ select distinct e.household_id,
      case when g.expendable_pfy3 is not null then g.expendable_pfy3 else 0 end as expendable_pfy3,
      case when g.expendable_pfy4 is not null then g.expendable_pfy4 else 0 end as expendable_pfy4,
      case when g.expendable_pfy5 is not null then g.expendable_pfy5 else 0 end as expendable_pfy5,
+     --- anon donor 
+     anon.has_anon_giving_ksm,
+     anon.ngc_lifetime_full_rec,
+     anon.ngc_lifetime_nonanon_full_rec,
      ---- Pull last 4 Gifts per Kellogg Fund 
      g.last_cash_tx_id,
      g.last_cash_date,
@@ -961,3 +977,5 @@ left join sp on sp.spouse_donor_id = e.spouse_donor_id
 left join HR on HR.donor_id = e.donor_id
 --- Reunion Event 
 left join reunion_event on reunion_event.donor_id = e.donor_id
+--- anon donor
+left join anon on anon.household_id = e.household_id_ksm
