@@ -739,7 +739,10 @@ left join strat_relation str on str.ucinn_ascendv2__donor_id__c = e.donor_id
 left join final_strategy_id on final_strategy_id.donor_id = e.donor_id
 --- proposal
 left join  prop on prop.donor_id = e.donor_id
---- Next Param - Prospects OR if you active an active proposal flag
-where (prop.donor_id is not null 
-or prospect.donor_id is not null) 
- 
+--- Next Param - Prospects OR if you active an active proposal flag with KSM flag = 'Y'
+where 
+--- prospect 
+(prospect.donor_id is not null
+--- prop = proposals are active, so just just use the KSM Flag = 'Y' here 
+or 
+(prop.donor_id is not null and prop.ksm_flag = 'Y'))
