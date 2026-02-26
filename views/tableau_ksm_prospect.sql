@@ -678,7 +678,8 @@ select  distinct
        funding.start_date as funding_start_date,
        funding.end_date as funding_end_date,
        funding.funding_interest_name,
-       kprop.ksm_active_proposal_count
+       kprop.ksm_active_proposal_count,
+       prop.ksm_flag
 from entity e 
 --- inner join prospect 
 inner join prospect on prospect.donor_id = e.donor_id
@@ -736,4 +737,9 @@ left join kprop on kprop.donor_id = e.donor_id
 left join strat_relation str on str.ucinn_ascendv2__donor_id__c = e.donor_id
 ---left join strategy_id_concat on strategy_id_concat.donor_id = e.donor_id
 left join final_strategy_id on final_strategy_id.donor_id = e.donor_id
+--- proposal
+left join  prop on prop.donor_id = e.donor_id
+--- Next Param - Prospects OR if you active an active proposal flag
+where (prop.donor_id is not null 
+or prospect.donor_id is not null) 
  
